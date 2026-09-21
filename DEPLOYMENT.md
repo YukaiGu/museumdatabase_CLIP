@@ -19,3 +19,9 @@ The server caps the queue at three jobs and accepts up to 20 search submissions 
 ## Local use
 
 `npm ci`, then `npm run dev`. Without deployment environment variables, the server continues to bind only to localhost. `npm run check` and `npm test` verify the code.
+
+## Vercel interface with a temporary Mac backend
+
+`vercel.json` publishes only `dist/` and proxies `/api/*` to the current Cloudflare Quick Tunnel. The repository's normal Node server, model, index, and images continue running on the Mac. Vercel is not running the search engine. This setup requires no paid Render service.
+
+Set `PUBLIC_ORIGIN` on the running Mac server to the exact tunnel URL and `ADDITIONAL_PUBLIC_ORIGINS=https://museumdatabase-clip.vercel.app`. Restart the server after changing these process environment variables. A replacement tunnel URL must also be updated in `vercel.json` and deployed. Only the production frontend origin is allowed; Vercel preview origins are not automatically trusted. The Mac must stay awake and both processes must stay running. When offline, the interface remains available, but search does not.

@@ -21,3 +21,9 @@ test('search submission cap resets after its time window', () => {
   assert.equal(allow(1000), true); assert.equal(allow(1001), true);
   assert.equal(allow(1002), false); assert.equal(allow(2000), true);
 });
+
+test('a proxy frontend can be explicitly allowed without allowing arbitrary previews', () => {
+  const origins = allowedOrigins(5173, { PUBLIC_ORIGIN: 'https://demo.trycloudflare.com', ADDITIONAL_PUBLIC_ORIGINS: 'https://atlas.vercel.app' });
+  assert.equal(requestAllowed({ host: 'demo.trycloudflare.com', origin: 'https://atlas.vercel.app' }, origins), true);
+  assert.equal(requestAllowed({ host: 'demo.trycloudflare.com', origin: 'https://other.vercel.app' }, origins), false);
+});

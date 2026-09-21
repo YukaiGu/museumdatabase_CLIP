@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 export const dataDirectory = path.resolve(process.env.DATA_DIR || fileURLToPath(new URL('../data/', import.meta.url))) + path.sep;
 export function allowedOrigins(port, environment = process.env) {
   const origins = [`http://127.0.0.1:${port}`, `http://localhost:${port}`];
-  for (const value of [environment.PUBLIC_ORIGIN, environment.RENDER_EXTERNAL_URL].filter(Boolean)) {
+  for (const value of [environment.PUBLIC_ORIGIN, environment.RENDER_EXTERNAL_URL, ...(environment.ADDITIONAL_PUBLIC_ORIGINS || '').split(',').map(value => value.trim())].filter(Boolean)) {
     const url = new URL(value);
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new Error('PUBLIC_ORIGIN must be an HTTP(S) origin without a path.');
     origins.push(url.origin);
