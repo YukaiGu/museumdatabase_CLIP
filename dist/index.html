@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Collection Atlas brings museum database selection, text queries, and image references into one visual research workspace.">
+  <meta name="theme-color" content="#354a31">
+  <title>Collection Atlas — Museum research</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23354a31'/%3E%3Cpath d='M6 12L16 6L26 12M7 25H25M10 15V22M16 15V22M22 15V22' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <a href="#search-workspace" class="skip-link">Skip to search</a>
+  <div class="app-shell">
+    <div class="workspace-layout">
+      <aside class="museum-panel" aria-labelledby="museum-heading">
+        <div class="panel-heading"><h2 id="museum-heading">Museum databases</h2><span id="selected-count" class="small tabular"></span></div>
+        <p class="small secondary">Choose one, several, or all connected databases.</p>
+        <div class="museum-filter">
+          <label class="sr-only" for="museum-filter">Find a museum or location</label>
+          <input id="museum-filter" type="search" placeholder="Find a museum or location" autocomplete="off">
+        </div>
+        <label class="museum-row all-row"><input id="select-all" type="checkbox"><span>All connected databases</span><span class="small" id="source-total"></span></label>
+        <div id="museum-list"></div>
+        <p id="no-museums" class="empty-message" hidden>No matching databases. Your selection is unchanged.</p>
+        <div class="panel-footer"><span id="selection-announcement" class="small" role="status"></span><button id="clear-selection" class="text-button" type="button">Clear selection</button></div>
+        <p class="source-note" id="connection-summary" role="status">Checking museum connections…</p>
+        <details id="potential-databases" class="potential-databases" hidden>
+          <summary>Potential databases <span id="potential-count" class="small"></span></summary>
+          <p class="small secondary">These sources need an API key, permission, or a working connection before they can be searched.</p>
+          <div id="potential-list"></div>
+        </details>
+      </aside>
+      <main id="search-workspace" class="search-workspace">
+        <header class="workspace-heading"><p class="eyebrow">Visual research workspace</p><h1>Find connections across collections.</h1><p class="secondary">Explore artworks with words, images, or both.</p></header>
+        <section class="scope-section" aria-labelledby="scope-heading">
+          <div class="section-heading"><h2 id="scope-heading">Search scope</h2><span id="scope-summary" class="small"></span></div>
+          <div id="selected-chips" class="selected-chips"></div>
+          <p id="empty-scope" class="small secondary" hidden>Select at least one database to continue.</p>
+        </section>
+        <form id="search-form" novalidate>
+          <div class="query-section">
+            <label for="query">Describe what you want to find</label>
+            <input id="query" type="text" placeholder="e.g. dragons on blue-and-white ceramics" maxlength="2000" autocomplete="off" aria-describedby="query-help">
+            <p id="query-help" class="small secondary" hidden>Color/pixel search uses reference images. Choose CLIP to combine words and images.</p>
+          </div>
+          <section class="reference-panel" aria-labelledby="reference-heading">
+            <h2 id="reference-heading"><span class="plus" aria-hidden="true">+</span> Find similar</h2>
+            <p class="small secondary">Add reference images to guide the search.</p>
+            <div id="reference-images" class="reference-images"></div>
+            <div class="upload-row"><label class="upload-button">Add images<input id="image-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple aria-label="Add reference images"></label><span class="small secondary">Up to 6 images · processed locally on your Mac.</span></div>
+            <p id="image-status" class="sr-only" role="status"></p>
+            <p id="image-error" class="error-message" role="alert" hidden></p>
+          </section>
+          <details id="advanced-search" class="advanced-search">
+            <summary><span>Advanced search</span><span class="summary-description">Search method · distance · result count</span></summary>
+            <div class="advanced-fields">
+              <label for="method">Search method<select id="method"><option value="clip">Text + visual meaning (CLIP)</option><option value="metadata">Museum metadata (keywords)</option><option value="raw">Color and pixels (Raw)</option><option value="vgg19" disabled>VGG19 — not installed</option><option value="poses" disabled>Figure poses — not installed</option></select></label>
+              <label for="distance">Distance measure<select id="distance"><option value="cosine">Cosine</option><option value="manhattan">Manhattan</option><option value="euclidean">Euclidean</option></select></label>
+              <label for="result-count">Results across selected sources<select id="result-count"><option>25</option><option selected>50</option><option>75</option><option>100</option></select></label>
+              <label for="grouping">Result grouping<select id="grouping"><option value="combined">Combined ranking</option><option value="museum">Group by database</option></select></label>
+            </div>
+          </details>
+          <div class="search-actions"><button id="reset-query" type="button" class="text-button">Reset query</button><button id="cancel-search" type="button" class="text-button" hidden>Cancel search</button><button id="search-button" type="submit" class="primary-button">Search artworks <span aria-hidden="true">↗</span></button></div>
+          <p id="query-error" class="error-message" role="alert" hidden></p>
+        </form>
+        <section id="search-results" class="search-results" aria-labelledby="results-heading" hidden>
+          <div class="section-heading"><h2 id="results-heading">Artworks</h2><span id="result-count-label" class="small"></span></div>
+          <p id="search-progress" class="search-progress" role="status"></p>
+          <p id="index-coverage" class="small secondary"></p>
+          <p id="stale-results" class="small secondary" hidden>Search settings changed. Run the search to update these results.</p>
+          <details id="source-coverage" class="source-coverage"><summary>Collection coverage</summary><ul id="coverage-list"></ul></details>
+          <div id="results-grid" class="results-grid"></div>
+          <p id="empty-results" class="empty-message" hidden>No matching artworks. Try a broader keyword or another connected museum.</p>
+        </section>
+        <footer class="workspace-footer"><span class="footer-rule" aria-hidden="true"></span><p>Local AI search · Original museum records and attribution preserved</p></footer>
+      </main>
+    </div>
+  </div>
+  <dialog id="artwork-dialog" aria-labelledby="artwork-title"><div class="dialog-top"><span class="small" id="artwork-museum"></span><button id="close-artwork" type="button" aria-label="Close artwork details">×</button></div><img id="artwork-image" alt=""><h2 id="artwork-title"></h2><dl id="artwork-metadata"></dl><p id="artwork-description"></p><p id="artwork-rights" class="small secondary"></p><div class="dialog-actions"><a id="artwork-source" target="_blank" rel="noopener noreferrer">View museum record ↗</a><button id="artwork-similar" class="primary-button" type="button">Find similar</button></div></dialog>
+  <noscript><p class="noscript-message">Enable JavaScript to select collections and prepare a search.</p></noscript>
+</body>
+</html>

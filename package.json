@@ -1,0 +1,25 @@
+{
+  "name": "collection-atlas",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Local museum metadata and CLIP image search across multiple collections.",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "setup:models": "node scripts/setup-models.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "3.8.1",
+    "cheerio": "1.1.2",
+    "sharp": "0.35.4"
+  },
+  "overrides": {
+    "sharp": "$sharp"
+  }
+}
