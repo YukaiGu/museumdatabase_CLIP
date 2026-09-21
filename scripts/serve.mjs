@@ -7,11 +7,15 @@ import { existsSync } from 'node:fs';
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 if (existsSync(`${projectRoot}.env`)) process.loadEnvFile(`${projectRoot}.env`);
 const { startSearch, getJob, cancelJob, getStatus, imagePath, getArtwork } = await import('../server/search.js');
+const { allowedOrigins, requestAllowed, createSearchLimiter } = await import('../server/hosting.js');
 const publicRoot = fileURLToPath(new URL('../dist/', import.meta.url));
 const mimeTypes = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp' };
 const portIndex = process.argv.indexOf('--port');
 const port = Number(portIndex >= 0 ? process.argv[portIndex + 1] : process.env.PORT || 5173);
 if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Use a valid port, for example: npm run dev -- --port 5174');
+const bindHost = process.env.HOST || '127.0.0.1';
+allowedOrigins(port); // Validate deployment configuration before accepting traffic.
+const allowSearch = createSearchLimiter();
 function sendJSON(response, status, value) { response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); response.end(JSON.stringify(value)); }
 async function readJSON(request) {
   if (!request.headers['content-type']?.startsWith('application/json')) throw new Error('Send application/json.');
@@ -21,15 +25,15 @@ async function readJSON(request) {
 }
 const server = http.createServer(async (request, response) => {
   const localPort = server.address()?.port;
-  const acceptedHosts = [`127.0.0.1:${localPort}`, `localhost:${localPort}`];
-  if (!acceptedHosts.includes(request.headers.host)) { sendJSON(response, 403, { error: 'Use the local application address.' }); return; }
-  if (request.headers.origin && ![`http://127.0.0.1:${localPort}`, `http://localhost:${localPort}`].includes(request.headers.origin)) { sendJSON(response, 403, { error: 'Cross-origin requests are not allowed.' }); return; }
+  if (!requestAllowed(request.headers, allowedOrigins(localPort))) { sendJSON(response, 403, { error: 'Use the configured application address.' }); return; }
   try {
     const url = new URL(request.url, `http://${request.headers.host}`);
     const pathname = decodeURIComponent(url.pathname);
     if (pathname.startsWith('/api/')) {
+      if (pathname === '/api/health' && request.method === 'GET') { sendJSON(response, 200, { status: 'ok' }); return; }
       if (pathname === '/api/status' && request.method === 'GET') { sendJSON(response, 200, getStatus()); return; }
       if (pathname === '/api/search' && request.method === 'POST') {
+        if (!allowSearch()) { response.setHeader('Retry-After', '60'); sendJSON(response, 429, { error: 'Too many searches. Please try again in a minute.' }); return; }
         try { const job = startSearch(await readJSON(request)); sendJSON(response, 202, { id: job.id, state: job.state }); }
         catch (error) { sendJSON(response, 400, { error: error.message }); } return;
       }
@@ -59,5 +63,7 @@ const server = http.createServer(async (request, response) => {
   } catch { if (!response.headersSent) sendJSON(response, 404, { error: 'Resource not found.' }); else response.end(); }
 });
 server.on('error', error => { console.error(error.code === 'EADDRINUSE' ? `Port ${port} is busy. Try: npm run dev -- --port 5174` : error.message); process.exitCode = 1; });
-server.listen(port, '127.0.0.1', () => console.log(`Collection Atlas: http://127.0.0.1:${server.address().port}/`));
+server.requestTimeout = 30_000;
+server.headersTimeout = 15_000;
+server.listen(port, bindHost, () => console.log(`Collection Atlas listening on ${bindHost}:${server.address().port}`));
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.close(() => process.exit(0)));

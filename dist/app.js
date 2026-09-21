@@ -30,7 +30,7 @@ function savePreferences() { try { localStorage.setItem(STORAGE_KEY, JSON.string
 async function api(url, options = {}) {
   const response = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers } });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'The local server could not complete this request.');
+  if (!response.ok) throw new Error(result.error || 'The search server could not complete this request.');
   return result;
 }
 function setBusy(value) { busy = value; $('cancel-search').hidden = !value; $('search-button').textContent = value ? 'Searching…' : 'Search artworks ↗'; updateSearchButton(); }
@@ -136,7 +136,7 @@ async function refreshStatus() {
     $('connection-summary').textContent = `${connected} connected databases · ${engine.indexed} artworks indexed. First visual searches may take longer while images are indexed.`;
     renderMuseumList(); renderPotentialDatabases(); renderSelection();
   } catch {
-    $('connection-summary').textContent = 'Start the project server with npm run dev, then reload this page.';
+    $('connection-summary').textContent = 'The search server is unavailable. Please reload or try again shortly.';
     updateSearchButton();
   }
 }
@@ -265,10 +265,10 @@ renderMuseumList(); renderSelection(); updateMethod(); void refreshStatus();
 
 if (document.modelContext?.registerTool) {
   const lifecycle = new AbortController(); window.addEventListener('pagehide', () => lifecycle.abort(), { once: true });
-  const tool = { name: 'configure_museum_scope', title: 'Select museum databases', description: 'Select databases for the local museum search. ["all"] and ["connected"] select all connected databases. Potential databases cannot be selected until connected. This action only changes the selection and does not run a search.', inputSchema: { type: 'object', properties: { databases: { type: 'array', items: { type: 'string', enum: ['all', 'connected', ...museums.map(m => m.id)] } } }, required: ['databases'], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute(input) {
+  const tool = { name: 'configure_museum_scope', title: 'Select museum databases', description: 'Select databases for the museum search. ["all"] and ["connected"] select all connected databases. Potential databases cannot be selected until connected. This action only changes the selection and does not run a search.', inputSchema: { type: 'object', properties: { databases: { type: 'array', items: { type: 'string', enum: ['all', 'connected', ...museums.map(m => m.id)] } } }, required: ['databases'], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute(input) {
     if (!input || !Array.isArray(input.databases) || Object.keys(input).some(key => key !== 'databases')) throw new Error('Expected a databases array.');
     if (input.databases.some(id => ['all', 'connected'].includes(id)) && input.databases.length !== 1) throw new Error('Use all or connected alone.');
-    if (['all', 'connected'].includes(input.databases[0]) && !engine) throw new Error('The local server is not available.');
+    if (['all', 'connected'].includes(input.databases[0]) && !engine) throw new Error('The search server is not available.');
     setDatabases(['all', 'connected'].includes(input.databases[0]) ? connectedMuseums().map(m => m.id) : input.databases);
     return { databases: currentPreferences().databases, count: selected.size };
   } };

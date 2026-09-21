@@ -79,3 +79,7 @@ New adapter references: [SMK API](https://api.smk.dk/api/v1/docs/), [Mia search 
 ## Asian collection expansion
 
 See [ASIAN-SOURCES.md](ASIAN-SOURCES.md) for access checks, reuse terms, remaining blockers and code locations. The National Art Museums of Japan union catalog is connected for explicitly downloadable NoC-CR images. Other new Asian catalogs have official links and accurate permission/access status; they do not contribute images until access and reuse requirements are resolved.
+
+## Public hosting
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the Render deployment configuration, persistent storage, and public server settings. The project remains local by default.

@@ -1,11 +1,11 @@
 import { mkdir, readFile, writeFile, rename, stat } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { dataDirectory } from './hosting.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { sourceDefinitions, searchSource } from './sources.js';
 import { remote, mapLimited } from './remote.js';
 import { MODEL_ID, loadModels, imageEmbedding, textEmbedding, average, distance, cleanImage, modelStatus } from './embeddings.js';
 
-const dataDir = fileURLToPath(new URL('../data/', import.meta.url));
+const dataDir = dataDirectory;
 const indexFile = `${dataDir}index-v1.json`;
 await mkdir(`${dataDir}images`, { recursive: true });
 let index = new Map();
@@ -53,7 +53,7 @@ function publicRecord(item) { const { clip, raw, clipVersion, ...metadata } = it
 export function startSearch(body) {
   const config = validateSearch(body);
   if ([...jobs.values()].filter(job => ['queued', 'running'].includes(job.state)).length >= 3) throw new Error('The search queue is busy. Cancel an earlier search or wait for it to finish.');
-  const job = { id: randomUUID(), state: 'queued', message: 'Waiting for the local search engine…', processed: 0, total: 0, coverage: [], createdAt: Date.now() };
+  const job = { id: randomUUID(), state: 'queued', message: 'Waiting for the search engine…', processed: 0, total: 0, coverage: [], createdAt: Date.now() };
   jobs.set(job.id, job);
   for (const [id, old] of jobs) if (Date.now() - old.createdAt > 30 * 60 * 1000 && !['queued', 'running'].includes(old.state)) jobs.delete(id);
   workQueue = workQueue.then(async () => {
@@ -123,7 +123,7 @@ async function runSearch(config, job) {
   }
   job.total = candidates.length;
   if (config.method === 'clip') {
-    job.message = 'Loading the local CLIP model…';
+    job.message = 'Loading the CLIP model…';
     await loadModels();
     for (const item of candidates) {
       if (job.cancelled) return;
@@ -153,7 +153,7 @@ async function runSearch(config, job) {
   }).sort((a, b) => queryVector ? a.distance - b.distance : b.relevance - a.relevance || a.title.localeCompare(b.title));
   const sourceCounts = config.databases.map(id => ({ id, indexed: candidates.filter(item => item.source === id).length }));
   const items = ranked.slice(0, config.results);
-  job.result = { items, returned: items.length, searched: candidates.length, imported: imported.length, query: config.query, method: config.method, distance: config.distance, grouping: config.grouping, coverage: job.coverage, sourceCounts, model: config.method === 'clip' ? MODEL_ID : null, note: config.method === 'metadata' ? 'Museum metadata search plus matches in the local index.' : 'Visual ranking searches the images imported into this local index, not every image held by the museums.' };
+  job.result = { items, returned: items.length, searched: candidates.length, imported: imported.length, query: config.query, method: config.method, distance: config.distance, grouping: config.grouping, coverage: job.coverage, sourceCounts, model: config.method === 'clip' ? MODEL_ID : null, note: config.method === 'metadata' ? 'Museum metadata search plus matches in the server index.' : 'Visual ranking searches the images imported into this server index, not every image held by the museums.' };
   const allFailed = job.coverage.every(source => !['ready', 'partial', 'empty'].includes(source.state));
   if (!items.length && allFailed) throw new Error('The selected museum services could not return records. See the source status details and try another connected collection.');
   job.state = 'done'; job.message = `${items.length} artworks found.`;

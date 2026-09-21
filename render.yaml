@@ -1,0 +1,19 @@
+# Review the paid compute and disk estimate in Render before creating this service.
+services:
+  - type: web
+    name: collection-atlas
+    runtime: docker
+    plan: 1c-2g
+    healthCheckPath: /api/health
+    numInstances: 1
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: "10000"
+      - key: DATA_DIR
+        value: /app/data
+    disk:
+      name: collection-data
+      mountPath: /app/data
+      sizeGB: 10

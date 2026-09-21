@@ -1,9 +1,9 @@
-import { fileURLToPath } from 'node:url';
+import { dataDirectory } from './hosting.js';
 import sharp from 'sharp';
 import { env, AutoTokenizer, AutoProcessor, CLIPTextModelWithProjection, CLIPVisionModelWithProjection, RawImage } from '@huggingface/transformers';
 
 export const MODEL_ID = 'Xenova/clip-vit-base-patch32';
-env.cacheDir = fileURLToPath(new URL('../data/models/', import.meta.url));
+env.cacheDir = `${dataDirectory}models/`;
 env.allowLocalModels = false;
 let loaded;
 export const modelStatus = { state: 'not_loaded', model: MODEL_ID };
