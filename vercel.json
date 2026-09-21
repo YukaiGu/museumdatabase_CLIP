@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://rely-pursuit-raise-understanding.trycloudflare.com/api/:path*"
+      "destination": "https://subsection-secretary-bible-ronald.trycloudflare.com/api/:path*"
     }
   ],
   "headers": [

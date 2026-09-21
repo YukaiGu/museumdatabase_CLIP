@@ -34,7 +34,7 @@
         </details>
       </aside>
       <main id="search-workspace" class="search-workspace">
-        <header class="workspace-heading"><p class="eyebrow">Visual research workspace</p><h1>Find connections across collections.</h1><p class="secondary">Explore artworks with words, images, or both.</p></header>
+        <header class="workspace-heading"><p class="eyebrow">Visual research workspace</p><h1>Find connections across collections.</h1><p class="secondary">Explore artworks with words, images, or both. Choose multilingual search for 中文, 日本語, 한국어, and more.</p></header>
         <section class="scope-section" aria-labelledby="scope-heading">
           <div class="section-heading"><h2 id="scope-heading">Search scope</h2><span id="scope-summary" class="small"></span></div>
           <div id="selected-chips" class="selected-chips"></div>
@@ -57,7 +57,7 @@
           <details id="advanced-search" class="advanced-search">
             <summary><span>Advanced search</span><span class="summary-description">Search method · distance · result count</span></summary>
             <div class="advanced-fields">
-              <label for="method">Search method<select id="method"><option value="clip">Text + visual meaning (CLIP)</option><option value="metadata">Museum metadata (keywords)</option><option value="raw">Color and pixels (Raw)</option><option value="vgg19" disabled>VGG19 — not installed</option><option value="poses" disabled>Figure poses — not installed</option></select></label>
+              <label for="method">Search method<select id="method"><option value="multilingual">Multilingual text + images (CLIP)</option><option value="clip">Text + visual meaning (CLIP)</option><option value="metadata">Museum metadata (keywords)</option><option value="raw">Color and pixels (Raw)</option><option value="vgg19" disabled>VGG19 — not installed</option><option value="poses" disabled>Figure poses — not installed</option></select></label>
               <label for="distance">Distance measure<select id="distance"><option value="cosine">Cosine</option><option value="manhattan">Manhattan</option><option value="euclidean">Euclidean</option></select></label>
               <label for="result-count">Results across selected sources<select id="result-count"><option>25</option><option selected>50</option><option>75</option><option>100</option></select></label>
               <label for="grouping">Result grouping<select id="grouping"><option value="combined">Combined ranking</option><option value="museum">Group by database</option></select></label>

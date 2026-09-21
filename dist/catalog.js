@@ -22,6 +22,7 @@ export const museums = Object.freeze([
 ]);
 
 export const methods = Object.freeze({
+  multilingual: { label: 'Multilingual text + images (CLIP)', defaultDistance: 'cosine', supportsText: true },
   clip: { label: 'Text + visual meaning (CLIP)', defaultDistance: 'cosine', supportsText: true },
   raw: { label: 'Color and pixels (Raw)', defaultDistance: 'manhattan', supportsText: false },
   metadata: { label: 'Museum metadata (keywords)', defaultDistance: 'cosine', supportsText: true },

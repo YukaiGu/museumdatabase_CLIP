@@ -1,3 +1,5 @@
+import { MULTILINGUAL_MODEL_ID, multilingualStatus, multilingualTextEmbedding } from './multilingual.js';
+import { retrieveExpanded } from './query-expansion.js';
 import { mkdir, readFile, writeFile, rename, stat } from 'node:fs/promises';
 import { dataDirectory } from './hosting.js';
 import { createHash, randomUUID } from 'node:crypto';
@@ -26,7 +28,7 @@ export function validateSearch(body) {
   if (!body || typeof body !== 'object') throw new Error('Send a search configuration.');
   const known = new Set(sourceDefinitions.map(s => s.id));
   if (!Array.isArray(body.databases) || !body.databases.length || body.databases.length > 20 || body.databases.some(id => !known.has(id))) throw new Error('Select valid museum databases.');
-  if (!['clip', 'raw', 'metadata'].includes(body.method)) throw new Error('This search model is not installed. Choose CLIP, color/pixels, or museum metadata.');
+  if (!['clip', 'multilingual', 'raw', 'metadata'].includes(body.method)) throw new Error('This search model is not installed. Choose CLIP, color/pixels, or museum metadata.');
   if (!['cosine', 'euclidean', 'manhattan'].includes(body.distance)) throw new Error('Invalid distance measure.');
   if (![25, 50, 75, 100].includes(body.results)) throw new Error('Invalid result count.');
   if (!['combined', 'museum'].includes(body.grouping)) throw new Error('Invalid result grouping.');
@@ -41,7 +43,7 @@ export function validateSearch(body) {
 }
 
 export function getStatus() {
-  return { model: modelStatus, sources: sourceDefinitions.map(source => ({ ...source, indexed: [...index.values()].filter(r => r.source === source.id).length, visualIndexed: [...index.values()].filter(r => r.source === source.id && r.clipVersion === VECTOR_VERSION).length })), indexed: index.size };
+  return { model: modelStatus, multilingualModel: multilingualStatus, sources: sourceDefinitions.map(source => ({ ...source, indexed: [...index.values()].filter(r => r.source === source.id).length, visualIndexed: [...index.values()].filter(r => r.source === source.id && r.clipVersion === VECTOR_VERSION).length })), indexed: index.size };
 }
 
 export function getJob(id) { return jobs.get(id); }
@@ -93,7 +95,7 @@ async function runSearch(config, job) {
     try {
       let response = searches.get(cacheKey);
       if (!response || Date.now() - response.at > 10 * 60 * 1000) {
-        let data = await searchSource(id, config.query, perSource);
+        let data = config.method === 'multilingual' ? await retrieveExpanded(searchSource, id, config.query, perSource) : await searchSource(id, config.query, perSource);
         if (config.method !== 'metadata' && !data.records.length && ![...index.values()].some(r => r.source === id)) {
           data = await searchSource(id, '', perSource);
           data.note = `${data.note || ''} No keyword candidates; imported a starting selection for visual ranking.`;
@@ -122,7 +124,7 @@ async function runSearch(config, job) {
     candidates = candidates.filter(item => directIds.has(item.id) || terms.every(term => `${item.title} ${item.artist} ${item.description} ${item.medium} ${item.culture}`.toLocaleLowerCase().includes(term)));
   }
   job.total = candidates.length;
-  if (config.method === 'clip') {
+  if (['clip', 'multilingual'].includes(config.method)) {
     job.message = 'Loading the CLIP model…';
     await loadModels();
     for (const item of candidates) {
@@ -140,7 +142,10 @@ async function runSearch(config, job) {
   if (job.cancelled) return;
   job.message = 'Comparing artworks and preparing results…';
   const vectors = [];
-  if (config.method === 'clip' && config.query) vectors.push(await textEmbedding(config.query));
+  if (config.query && ['clip', 'multilingual'].includes(config.method)) {
+    job.message = config.method === 'multilingual' ? 'Encoding your multilingual query…' : 'Encoding your query…';
+    vectors.push(await (config.method === 'multilingual' ? multilingualTextEmbedding(config.query) : textEmbedding(config.query)));
+  }
   for (const encoded of config.images) {
     const buffer = await cleanImage(Buffer.from(encoded.split(',')[1], 'base64'));
     vectors.push(await imageEmbedding(buffer, config.method));
@@ -153,7 +158,7 @@ async function runSearch(config, job) {
   }).sort((a, b) => queryVector ? a.distance - b.distance : b.relevance - a.relevance || a.title.localeCompare(b.title));
   const sourceCounts = config.databases.map(id => ({ id, indexed: candidates.filter(item => item.source === id).length }));
   const items = ranked.slice(0, config.results);
-  job.result = { items, returned: items.length, searched: candidates.length, imported: imported.length, query: config.query, method: config.method, distance: config.distance, grouping: config.grouping, coverage: job.coverage, sourceCounts, model: config.method === 'clip' ? MODEL_ID : null, note: config.method === 'metadata' ? 'Museum metadata search plus matches in the server index.' : 'Visual ranking searches the images imported into this server index, not every image held by the museums.' };
+  job.result = { items, returned: items.length, searched: candidates.length, imported: imported.length, query: config.query, method: config.method, distance: config.distance, grouping: config.grouping, coverage: job.coverage, sourceCounts, model: config.method === 'multilingual' ? MULTILINGUAL_MODEL_ID : config.method === 'clip' ? MODEL_ID : null, note: config.method === 'metadata' ? 'Museum metadata search plus matches in the server index.' : 'Visual ranking searches the images imported into this server index, not every image held by the museums.' };
   const allFailed = job.coverage.every(source => !['ready', 'partial', 'empty'].includes(source.state));
   if (!items.length && allFailed) throw new Error('The selected museum services could not return records. See the source status details and try another connected collection.');
   job.state = 'done'; job.message = `${items.length} artworks found.`;

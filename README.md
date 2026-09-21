@@ -83,3 +83,13 @@ See [ASIAN-SOURCES.md](ASIAN-SOURCES.md) for access checks, reuse terms, remaini
 ## Public hosting
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the Render deployment configuration, persistent storage, and public server settings. The project remains local by default.
+
+## Multilingual visual search
+
+In **Advanced search → Search method**, choose **Multilingual text + images (CLIP)** to search in Chinese (simplified/traditional), Japanese, Korean, English, and other languages supported by the model. The original CLIP option remains available for comparison; existing preferences are preserved.
+
+The pinned `sentence-transformers/clip-ViT-B-32-multilingual-v1` text model uses masked mean pooling and its learned 768-to-512 projection, then normalization. It is aligned to CLIP ViT-B/32 and shares the existing quantized image index. Official ONNX weights and projection weights are cached locally; the first load requires a download. See the [model card and Apache-2.0 license](https://huggingface.co/sentence-transformers/clip-ViT-B-32-multilingual-v1).
+
+Candidate retrieval preserves the original query and adds a small curated glossary of English and Asian art terms where recognized. This is not general machine translation. Search coverage lists the queries actually used. Original metadata and image attribution are retained, and visual ranking uses the original query. No matching glossary term means no automatic translation. The search still covers imported images, not all museum holdings.
+
+Run `node scripts/evaluate-multilingual.mjs` to compare 12 queries in four languages against the local image index. It writes `research/multilingual-evaluation.json` with rankings, consistency with English CLIP, latency, and process memory. These are engineering checks, not human-labeled relevance scores. AI processing continues on the Mac behind the temporary tunnel for the current Vercel deployment.
