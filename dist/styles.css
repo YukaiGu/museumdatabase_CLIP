@@ -165,3 +165,5 @@ dialog::backdrop{background:rgb(0 0 0 / .55)}
 .all-row > span:first-of-type { flex: 1; }
 
 .metadata-placeholder { display: flex; min-height: 180px; align-items: center; justify-content: center; padding: 24px; color: #586650; background: #edf0e7; }
+
+.similarity-score { color: var(--active); font-size: .8125rem; font-weight: 600; font-variant-numeric: tabular-nums; margin: 12px 0; }

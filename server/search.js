@@ -165,7 +165,8 @@ async function runSearch(config, job) {
   const queryVector = vectors.length ? average(vectors) : null;
   const ranked = candidates.filter(item => !config.referenceIds.includes(item.id)).map(item => {
     const value = queryVector ? distance(queryVector, config.method === 'raw' ? item.raw : item.clip, config.distance) : null;
-    return { ...publicRecord(item), distance: value, relevance: directIds.has(item.id) ? 1 : 0 };
+    const cosineSimilarity = queryVector && ['clip', 'multilingual'].includes(config.method) ? Math.max(-1, Math.min(1, 1 - distance(queryVector, item.clip, 'cosine'))) : null;
+    return { ...publicRecord(item), distance: value, cosineSimilarity, relevance: directIds.has(item.id) ? 1 : 0 };
   }).sort((a, b) => queryVector ? a.distance - b.distance : b.relevance - a.relevance || a.title.localeCompare(b.title));
   const sourceCounts = config.databases.map(id => ({ id, indexed: candidates.filter(item => item.source === id).length }));
   const items = ranked.slice(0, config.results);

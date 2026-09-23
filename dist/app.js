@@ -207,6 +207,8 @@ function renderResults(result) {
   $('result-count-label').textContent = `${result.returned} results`;
   $('index-coverage').textContent = `${result.searched} indexed records searched · ${result.imported} records retrieved this time. ${result.note}`;
   $('results-grid').replaceChildren();
+  const showSimilarity = ['clip', 'multilingual'].includes(result.method) && $('grouping').value === 'combined';
+  if (showSimilarity) $('index-coverage').textContent += ' Cosine similarity ranges from −1 to 1; higher means a closer match, not a confidence percentage.' + (result.distance !== 'cosine' ? ` Results are ordered by ${result.distance} distance; cosine scores are shown separately.` : '');
   const items = [...result.items];
   if ($('grouping').value === 'museum') items.sort((a, b) => museums.findIndex(m => m.id === a.source) - museums.findIndex(m => m.id === b.source));
   let group = null;
@@ -218,6 +220,10 @@ function renderResults(result) {
     image.addEventListener('error', () => { image.hidden = true; open.append(node('span', 'Image unavailable')); }, { once: true });
     if (artwork.image) open.append(image); else open.append(node('span', 'Metadata only · View record', 'metadata-placeholder')); open.addEventListener('click', () => openArtwork(artwork));
     const body = node('div', undefined, 'artwork-card-body'); body.append(node('p', artwork.holdingMuseum || museumName(artwork.source), 'artwork-source-name'), node('h3', artwork.title), node('p', [artwork.artist, artwork.date].filter(Boolean).join(' · '), 'small secondary'));
+    if (showSimilarity) {
+      const score = Number.isFinite(artwork.cosineSimilarity) ? artwork.cosineSimilarity : result.distance === 'cosine' && Number.isFinite(artwork.distance) ? Math.max(-1, Math.min(1, 1 - artwork.distance)) : null;
+      body.append(node('p', score === null ? 'Cosine similarity: — (add a query or reference image)' : `Cosine similarity: ${score.toFixed(4)}`, 'similarity-score'));
+    }
     const similar = node('button', 'Find similar', 'text-button'); similar.type = 'button'; similar.addEventListener('click', () => useReference(artwork));
     const details = node('button', 'Details', 'text-button'); details.type = 'button'; details.addEventListener('click', () => openArtwork(artwork));
     const actions = node('div', undefined, 'card-actions'); actions.append(details); if (artwork.image) actions.append(similar); body.append(actions); card.append(open, body); $('results-grid').append(card);
