@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://subsection-secretary-bible-ronald.trycloudflare.com/api/:path*"
+      "destination": "https://entrepreneurs-switches-coaches-commissioner.trycloudflare.com/api/:path*"
     }
   ],
   "headers": [
