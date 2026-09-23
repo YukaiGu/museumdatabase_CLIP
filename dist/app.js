@@ -84,7 +84,7 @@ function renderMuseumList() {
       checkbox.type = 'checkbox'; checkbox.value = museum.id; checkbox.checked = selected.has(museum.id); checkbox.setAttribute('aria-label', museum.name);
       checkbox.addEventListener('change', () => { if (checkbox.checked) selected.add(museum.id); else selected.delete(museum.id); onScopeChange(); });
       const connection = engine?.sources.find(source => source.id === museum.id);
-      const status = !connection ? 'Checking…' : connection.state === 'ready' ? `Connected · ${connection.indexed} indexed` : connection.state === 'key_required' ? 'API key required' : ({ access_blocked: 'Access blocked', permission_review: 'Reuse review needed', permission_required: 'Permission required', validation_required: 'Validation needed' }[connection.state] || 'Not connected');
+      const status = !connection ? 'Checking…' : connection.state === 'ready' ? `Connected${connection.methods?.length === 1 && connection.methods[0] === 'metadata' ? ' · Metadata only' : ''} · ${connection.indexed} indexed` : connection.state === 'key_required' ? 'API key required' : ({ access_blocked: 'Access blocked', permission_review: 'Reuse review needed', permission_required: 'Permission required', validation_required: 'Validation needed' }[connection.state] || 'Not connected');
       const copy = node('span', undefined, 'museum-copy'); copy.append(node('span', museum.name), node('small', museum.location), node('small', status, connection?.state === 'ready' ? 'source-connected' : 'source-unavailable'));
       label.append(checkbox, copy); section.append(label);
       if (connection?.catalogUrl) {
@@ -125,6 +125,7 @@ function updateMethod() {
   const textEnabled = methods[$('method').value].supportsText;
   $('query').disabled = !textEnabled; $('query-help').hidden = textEnabled;
   $('distance').disabled = $('method').value === 'metadata';
+  $('metadata-source-help').textContent = $('method').value === 'metadata' ? 'Metadata-only collections are included. Their records link to the original museum catalog.' : 'Collections marked Metadata only require Museum metadata (keywords) in Advanced settings; visual searches skip them.';
 }
 async function refreshStatus() {
   try {
@@ -174,26 +175,29 @@ async function addImages(files) {
 }
 function renderCoverage(coverage) {
   $('coverage-list').replaceChildren();
-  const labels = { access_blocked: 'Access blocked', permission_review: 'Reuse review needed', permission_required: 'Permission required', ready: 'Connected', empty: 'No new matches', partial: 'Partial results', error: 'Service error', key_required: 'API key required', unavailable: 'Not connected', validation_required: 'Setup required', loading: 'Retrieving' };
+  const labels = { metadata_only: 'Metadata only — skipped for visual search', access_blocked: 'Access blocked', permission_review: 'Reuse review needed', permission_required: 'Permission required', ready: 'Connected', empty: 'No new matches', partial: 'Partial results', error: 'Service error', key_required: 'API key required', unavailable: 'Not connected', validation_required: 'Setup required', loading: 'Retrieving' };
   for (const source of coverage) {
     const row = node('li'); row.append(node('strong', `${museumName(source.id)} — ${labels[source.state] || source.state}`));
-    row.append(node('span', ` ${source.indexed || 0} images imported for this query. ${source.message || ''}`)); $('coverage-list').append(row);
+    row.append(node('span', ` ${source.indexed || 0} records imported for this query. ${source.message || ''}`)); $('coverage-list').append(row);
   }
   if (coverage.some(source => !['ready', 'empty', 'loading'].includes(source.state))) $('source-coverage').open = true;
 }
 function sourceLink(value) { try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) ? url.href : null; } catch { return null; } }
 function openArtwork(artwork) {
   $('artwork-title').textContent = artwork.title; $('artwork-museum').textContent = museumName(artwork.source);
-  $('artwork-image').src = artwork.image; $('artwork-image').alt = artwork.title;
-  const fields = [['Creator', artwork.artist], ['Date / period', artwork.date], ['Material / type', artwork.medium], ['Culture / origin', artwork.culture]].filter(([, value]) => value);
+  $('artwork-image').hidden = !artwork.image;
+  if (artwork.image) $('artwork-image').src = artwork.image; else $('artwork-image').removeAttribute('src');
+  $('artwork-image').alt = artwork.title; $('artwork-similar').hidden = !artwork.image;
+  const fields = [['Holding museum', artwork.holdingMuseum], ['Accession number', artwork.accessionNumber], ['Creator', artwork.artist], ['Date / period', artwork.date], ['Material / type', artwork.medium], ['Culture / origin', artwork.culture]].filter(([, value]) => value);
   $('artwork-metadata').replaceChildren(...fields.flatMap(([label, value]) => [node('dt', label), node('dd', value)]));
-  $('artwork-description').textContent = artwork.description || 'No description supplied by the museum.';
+  $('artwork-description').textContent = artwork.description || (artwork.metadataOnly ? 'Images and narrative descriptions are excluded from this metadata connection. View the original museum record for more.' : 'No description supplied by the museum.');
   $('artwork-rights').textContent = `${artwork.rights}. ${artwork.attribution}`;
   const link = sourceLink(artwork.sourceUrl); $('artwork-source').hidden = !link; if (link) $('artwork-source').href = link;
   $('artwork-similar').onclick = () => { $('artwork-dialog').close(); useReference(artwork); };
   $('artwork-dialog').showModal();
 }
 function useReference(artwork) {
+  if (!artwork.image) return;
   uploadGeneration += 1; discardReferences(); references = [{ id: artwork.id, url: artwork.image, name: artwork.title }];
   $('query').value = ''; $('method').value = 'clip'; $('distance').value = 'cosine'; updateMethod(); renderReferences(); savePreferences(); invalidateResults();
   void runSearch();
@@ -201,7 +205,7 @@ function useReference(artwork) {
 function renderResults(result) {
   lastResult = result; $('stale-results').hidden = false;
   $('result-count-label').textContent = `${result.returned} results`;
-  $('index-coverage').textContent = `${result.searched} indexed images searched · ${result.imported} images retrieved this time. ${result.note}`;
+  $('index-coverage').textContent = `${result.searched} indexed records searched · ${result.imported} records retrieved this time. ${result.note}`;
   $('results-grid').replaceChildren();
   const items = [...result.items];
   if ($('grouping').value === 'museum') items.sort((a, b) => museums.findIndex(m => m.id === a.source) - museums.findIndex(m => m.id === b.source));
@@ -210,13 +214,13 @@ function renderResults(result) {
     if ($('grouping').value === 'museum' && group !== artwork.source) { group = artwork.source; $('results-grid').append(node('h3', museumName(group), 'result-group-heading')); }
     const card = node('article', undefined, 'artwork-card');
     const open = node('button', undefined, 'artwork-image-button'); open.type = 'button'; open.setAttribute('aria-label', `View details: ${artwork.title}`);
-    const image = document.createElement('img'); image.src = artwork.image; image.alt = artwork.title; image.loading = 'lazy'; image.width = 300; image.height = 240;
+    const image = document.createElement('img'); if (artwork.image) image.src = artwork.image; image.alt = artwork.title; image.loading = 'lazy'; image.width = 300; image.height = 240;
     image.addEventListener('error', () => { image.hidden = true; open.append(node('span', 'Image unavailable')); }, { once: true });
-    open.append(image); open.addEventListener('click', () => openArtwork(artwork));
-    const body = node('div', undefined, 'artwork-card-body'); body.append(node('p', museumName(artwork.source), 'artwork-source-name'), node('h3', artwork.title), node('p', [artwork.artist, artwork.date].filter(Boolean).join(' · '), 'small secondary'));
+    if (artwork.image) open.append(image); else open.append(node('span', 'Metadata only · View record', 'metadata-placeholder')); open.addEventListener('click', () => openArtwork(artwork));
+    const body = node('div', undefined, 'artwork-card-body'); body.append(node('p', artwork.holdingMuseum || museumName(artwork.source), 'artwork-source-name'), node('h3', artwork.title), node('p', [artwork.artist, artwork.date].filter(Boolean).join(' · '), 'small secondary'));
     const similar = node('button', 'Find similar', 'text-button'); similar.type = 'button'; similar.addEventListener('click', () => useReference(artwork));
     const details = node('button', 'Details', 'text-button'); details.type = 'button'; details.addEventListener('click', () => openArtwork(artwork));
-    const actions = node('div', undefined, 'card-actions'); actions.append(details, similar); body.append(actions); card.append(open, body); $('results-grid').append(card);
+    const actions = node('div', undefined, 'card-actions'); actions.append(details); if (artwork.image) actions.append(similar); body.append(actions); card.append(open, body); $('results-grid').append(card);
   }
   $('empty-results').hidden = items.length > 0; renderCoverage(result.coverage); $('stale-results').hidden = true;
 }

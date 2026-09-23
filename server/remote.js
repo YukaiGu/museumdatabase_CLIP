@@ -1,4 +1,5 @@
 const allowedHosts = new Set([
+  'artplatform.go.jp', 'inventory.yokohama.art.museum',
   'search.artmuseums.go.jp',
   'api.smk.dk', 'iip.smk.dk', 'iip-thumb.smk.dk', 'search.artsmia.org', 'img.artsmia.org',
   'collectionapi.metmuseum.org', 'images.metmuseum.org', 'api.artic.edu', 'www.artic.edu',

@@ -1,5 +1,12 @@
 /** Display names. Live connection status and indexed counts come from /api/status. */
 export const museums = Object.freeze([
+  {"id": "shuzo", "name": "Japanese Museum Collections (SHŪZŌ)", "short": "SHŪZŌ", "location": "Japan · participating museums", "region": "Asia"},
+  {"id": "yokohama", "name": "Yokohama Museum of Art", "short": "Yokohama Museum of Art", "location": "Yokohama, Japan · Triennale venue", "region": "Asia"},
+  {"id": "psa", "name": "Power Station of Art · Shanghai Biennale", "short": "Power Station of Art", "location": "Shanghai, China · exhibition archive", "region": "Asia"},
+  {"id": "tfam", "name": "Taipei Fine Arts Museum · Taipei Biennial", "short": "Taipei Fine Arts Museum", "location": "Taipei · collection and exhibition archive", "region": "Asia"},
+  {"id": "gwangju", "name": "Gwangju Biennale Archive", "short": "Gwangju Biennale", "location": "Gwangju, South Korea · exhibition archive", "region": "Asia"},
+  {"id": "busan", "name": "Museum of Contemporary Art Busan · Busan Biennale", "short": "Busan Biennale / MOCA Busan", "location": "Busan, South Korea · exhibition venues", "region": "Asia"},
+
   {'id': 'palace_beijing', 'name': 'Palace Museum, Beijing', 'short': 'Palace Museum', 'location': 'Beijing, China', 'region': 'Asia'},
   {'id': 'national_china', 'name': 'National Museum of China', 'short': 'National Museum of China', 'location': 'Beijing, China', 'region': 'Asia'},
   {'id': 'shanghai', 'name': 'Shanghai Museum', 'short': 'Shanghai Museum', 'location': 'Shanghai, China', 'region': 'Asia'},

@@ -1,3 +1,4 @@
+import { shuzo, yokohama } from './japanese-metadata.js';
 import { japanArt } from './asian-sources.js';
 import * as cheerio from 'cheerio';
 import { remote, mapLimited } from './remote.js';
@@ -9,6 +10,13 @@ const ENGLISH = 'http://vocab.getty.edu/aat/300388277';
 const name = values => { const items = array(values).filter(v => v.type === 'Name'); return items.find(v => v.language?.some(l => l.id === ENGLISH))?.content || items[0]?.content || ''; };
 
 export const sourceDefinitions = [
+  {"id": "shuzo", "state": "ready", "note": "Metadata only. Bounded keyword searches; retains the holding museum. Attribution and modification notice included; no images or full database reproduction.", "catalogUrl": "https://artplatform.go.jp/collections", "termsUrl": "https://artplatform.go.jp/terms-of-use", "methods": ["metadata"], "cacheLimit": 250},
+  {"id": "yokohama", "state": "ready", "note": "Metadata only (CC BY 4.0). Basic catalog fields; images and work descriptions are excluded. Collection holdings, not a Triennale exhibition inventory.", "catalogUrl": "https://inventory.yokohama.art.museum/eng/", "termsUrl": "https://inventory.yokohama.art.museum/eng/siteterms.html", "methods": ["metadata"], "cacheLimit": 250},
+  {"id": "psa", "state": "permission_review", "note": "Shanghai Biennale organizer and permanent main venue. Public exhibition archive; a supported data feed and metadata/image reuse permission have not been established. Not connected.", "catalogUrl": "https://www.powerstationofart.com/whats-on/news/shb-2020"},
+  {"id": "tfam", "state": "permission_review", "note": "Collection catalog and Taipei Biennial archive. Automated data access and reuse terms still need verification; exhibited works must not be treated as collection holdings.", "catalogUrl": "https://www.tfam.museum/Collection/Collection.aspx?ddlLang=en-us"},
+  {"id": "gwangju", "state": "permission_review", "note": "Biennale archive with multiple venues, including the Biennale Exhibition Hall. Not a single museum collection. No supported import feed or reuse permission verified.", "catalogUrl": "https://www.gwangjubiennale.org/en/archive/publication/catalogue.do"},
+  {"id": "busan", "state": "permission_review", "note": "MOCA Busan is one of the Biennale venues; venues vary by edition. Collection/exhibition data feed and reuse terms still need verification.", "catalogUrl": "https://www.busan.go.kr/eng/bsnews01/1620592"},
+
   {'id': 'japan_art', 'state': 'ready', 'note': 'Imports only downloadable NoC-CR images with attribution and a modification notice. Five museums; keyword search required for new imports.', 'catalogUrl': 'https://search.artmuseums.go.jp/search_e/', 'termsUrl': 'https://search.artmuseums.go.jp/search_e/terms.html'},
   {'id': 'tomuco', 'state': 'access_blocked', 'note': 'Documented metadata API; last direct request returned HTTP 403. Image permissions are per object; most unlabeled images have third-party rights. No access restriction is bypassed.', 'catalogUrl': 'https://museumcollection.tokyo/', 'termsUrl': 'https://museumcollection.tokyo/terms/'},
   {'id': 'palace_beijing', 'state': 'permission_review', 'note': 'Official terms require attribution, written permission for modifications, and written permission for commercial use. Local image transformation/indexing is not enabled pending clarification.', 'catalogUrl': 'https://digicol.dpm.org.cn/', 'termsUrl': 'https://www.dpm.org.cn/bottom/privacy/236341.html'},
@@ -152,7 +160,7 @@ async function mia(query, limit) {
   return { records: miaRecords(result.hits?.hits || []).slice(0, limit), total: result.hits?.total?.value ?? result.hits?.total };
 }
 
-const adapters = { japan_art: japanArt, npm, met, rijks, artic, cleveland, smithsonian, emuseum, smk, mia };
+const adapters = { shuzo, yokohama, japan_art: japanArt, npm, met, rijks, artic, cleveland, smithsonian, emuseum, smk, mia };
 export async function searchSource(id, query, limit) {
   const source = sourceDefinitions.find(s => s.id === id);
   if (!source || source.state !== 'ready') throw new Error(source?.note || 'Unknown museum.');

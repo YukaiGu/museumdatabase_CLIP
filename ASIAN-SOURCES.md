@@ -22,3 +22,23 @@ The project was moved to `/Users/guyuanoo/Desktop/collection-atlas` during devel
 ## Credential setup
 
 Use a local `.env` file based on `.env.example`. Do not put keys in frontend files. eMuseum needs `EMUSEUM_API_KEY`; this alone does not enable the unvalidated adapter. No new API key is required for Japan's National Art Museums catalog.
+
+## September 22, 2026: Japanese metadata and biennial sources
+
+Two additional working connections support **Museum metadata (keywords)** only:
+
+- **SHŪZŌ / Art Platform Japan** — keyword searches across participating Japanese museums. Only basic title, artist, date, medium, holding museum and record URL are extracted from one result page; no image or narrative text is imported. Results are diversified across the museums on that page. [Terms](https://artplatform.go.jp/terms-of-use) permit attributed reuse subject to third-party rights, require a modification notice, and prohibit reproducing the entire site/database. The adapter does not crawl or bulk-sync; imports at most 25 records per query and retains at most 250 source records. These limits are application safeguards, not limits specified by the provider. Each record includes attribution and a normalization notice. [User guide](https://artplatform.go.jp/about/user-guide).
+- **Yokohama Museum of Art** — searches the English or Japanese catalog according to query script. [Terms](https://inventory.yokohama.art.museum/eng/siteterms.html) license basic metadata under CC BY 4.0; descriptions and images have different restrictions and are excluded. Attribution, record URL and license URL are retained. The collection is distinct from the [Yokohama Triennale exhibition inventory](https://www.yokohamatriennale.jp/2024/en/outline/); a triennial is not a biennial.
+
+Live smoke checks returned English `landscape` records from both services and Japanese `風景` records from Yokohama. SHŪZŌ's landscape results included Chihiro Art Museum Tokyo / Azumino and Tamashin Art Museum as well as national museums. The adapter queries live search results; this does not mean all of their holdings have been downloaded. HTML adapters may need maintenance if the catalogs change.
+
+Four further sources are listed only under **Potential databases**:
+
+| Source | Verified role / official reference | Remaining work |
+| --- | --- | --- |
+| Power Station of Art, Shanghai | [Shanghai Biennale organizer and permanent main venue](https://www.powerstationofart.com/whats-on/news/shb-2020) | Establish usable data access and metadata/image reuse terms. |
+| Taipei Fine Arts Museum | [Collection catalog](https://www.tfam.museum/Collection/Collection.aspx?ddlLang=en-us); [Taipei Biennial host](https://www.tfam.museum/News/News_page.aspx?ddlLang=en-us&id=2011) | Verify automated access and reuse terms for each dataset. |
+| Gwangju Biennale | [Archive](https://www.gwangjubiennale.org/en/archive/publication/catalogue.do); [multiple exhibition venues](https://www.gwangjubiennale.org/en/exhibition/past/14.do?subPageCode=venues) | Establish data feed and reuse terms; distinguish exhibitions from permanent collections. |
+| MOCA Busan / Busan Biennale | [City's official 2024 venue listing](https://www.busan.go.kr/eng/bsnews01/1620592) | Establish collection/exhibition feed and reuse terms; verify venues by edition. |
+
+No API key is presumed to solve these pending connections. Publicly visible pages do not by themselves establish an open data or image license. No permission requests have been sent to the institutions.

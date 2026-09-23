@@ -24,19 +24,22 @@ async function saveIndex() {
   await rename(temporary, indexFile);
 }
 
+export function sourceSupportsMethod(id, method) { const source = sourceDefinitions.find(s => s.id === id); return source?.state === 'ready' && (!source.methods || source.methods.includes(method)); }
+
 export function validateSearch(body) {
   if (!body || typeof body !== 'object') throw new Error('Send a search configuration.');
   const known = new Set(sourceDefinitions.map(s => s.id));
-  if (!Array.isArray(body.databases) || !body.databases.length || body.databases.length > 20 || body.databases.some(id => !known.has(id))) throw new Error('Select valid museum databases.');
+  if (!Array.isArray(body.databases) || !body.databases.length || body.databases.length > sourceDefinitions.length || body.databases.some(id => !known.has(id))) throw new Error('Select valid museum databases.');
   if (!['clip', 'multilingual', 'raw', 'metadata'].includes(body.method)) throw new Error('This search model is not installed. Choose CLIP, color/pixels, or museum metadata.');
   if (!['cosine', 'euclidean', 'manhattan'].includes(body.distance)) throw new Error('Invalid distance measure.');
   if (![25, 50, 75, 100].includes(body.results)) throw new Error('Invalid result count.');
   if (!['combined', 'museum'].includes(body.grouping)) throw new Error('Invalid result grouping.');
   if (typeof body.query !== 'string' || body.query.length > 2000) throw new Error('The query must be text under 2,000 characters.');
+  if (body.databases.some(id => sourceDefinitions.find(s => s.id === id)?.state === 'ready') && !body.databases.some(id => sourceSupportsMethod(id, body.method))) throw new Error('These databases support metadata only. Choose Museum metadata (keywords) in Advanced settings.');
   const images = body.images ?? []; const referenceIds = body.referenceIds ?? [];
   if (!Array.isArray(images) || !Array.isArray(referenceIds) || images.length + referenceIds.length > 6) throw new Error('Use up to six reference images.');
   if (images.some(image => typeof image !== 'string' || image.length > 3_000_000 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(image))) throw new Error('Invalid reference image.');
-  if (referenceIds.some(id => typeof id !== 'string' || !index.has(id))) throw new Error('A reference artwork is no longer in the index.');
+  if (referenceIds.some(id => typeof id !== 'string' || !index.has(id) || index.get(id).metadataOnly)) throw new Error('A reference artwork is no longer in the index.');
   if (body.method === 'raw' && images.length + referenceIds.length === 0) throw new Error('Add a reference image for color/pixel search.');
   if (body.method === 'metadata' && (images.length || referenceIds.length)) throw new Error('Choose CLIP or color/pixels to search with reference images.');
   return { databases: [...new Set(body.databases)], method: body.method, distance: body.distance, results: body.results, grouping: body.grouping, query: body.query.trim(), images, referenceIds };
@@ -48,9 +51,9 @@ export function getStatus() {
 
 export function getJob(id) { return jobs.get(id); }
 export function cancelJob(id) { const job = jobs.get(id); if (job && !['done', 'error', 'cancelled'].includes(job.state)) { job.cancelled = true; job.state = 'cancelled'; job.message = 'Search cancelled.'; } return job; }
-export function imagePath(id) { if (!/^[a-f0-9]{24}$/.test(id) || !index.has(id)) return null; return `${dataDir}images/${id}.jpg`; }
+export function imagePath(id) { if (!/^[a-f0-9]{24}$/.test(id) || !index.has(id) || index.get(id).metadataOnly) return null; return `${dataDir}images/${id}.jpg`; }
 export function getArtwork(id) { const item = index.get(id); return item ? publicRecord(item) : null; }
-function publicRecord(item) { const { clip, raw, clipVersion, ...metadata } = item; return { ...metadata, image: `/api/images/${item.id}` }; }
+function publicRecord(item) { const { clip, raw, clipVersion, ...metadata } = item; return { ...metadata, image: item.metadataOnly ? null : `/api/images/${item.id}` }; }
 
 export function startSearch(body) {
   const config = validateSearch(body);
@@ -70,6 +73,14 @@ export function startSearch(body) {
 async function materialize(record) {
   const id = createHash('sha256').update(`${record.source}:${record.sourceId}`).digest('hex').slice(0, 24);
   let existing = index.get(id);
+  if (record.metadataOnly) {
+    const item = { ...record, id, importedAt: new Date().toISOString() };
+    index.set(id, item);
+    const cap = sourceDefinitions.find(s => s.id === record.source)?.cacheLimit || 250;
+    const rows = [...index.values()].filter(r => r.source === record.source).sort((a, b) => a.importedAt.localeCompare(b.importedAt));
+    for (const old of rows.slice(0, Math.max(0, rows.length - cap))) index.delete(old.id);
+    return item;
+  }
   const imageFile = `${dataDir}images/${id}.jpg`;
   let buffer;
   try { buffer = await readFile(imageFile); } catch {}
@@ -84,8 +95,8 @@ async function materialize(record) {
 
 async function runSearch(config, job) {
   job.state = 'running'; job.message = 'Retrieving records from selected museums…';
-  const ready = config.databases.filter(id => sourceDefinitions.find(s => s.id === id)?.state === 'ready');
-  job.coverage = config.databases.map(id => { const source = sourceDefinitions.find(s => s.id === id); return { id, state: source.state === 'ready' ? 'loading' : source.state, message: source.note, retrieved: 0, indexed: 0 }; });
+  const ready = config.databases.filter(id => sourceSupportsMethod(id, config.method));
+  job.coverage = config.databases.map(id => { const source = sourceDefinitions.find(s => s.id === id); return { id, state: source.state === 'ready' ? (sourceSupportsMethod(id, config.method) ? 'loading' : 'metadata_only') : source.state, message: source.state === 'ready' && !sourceSupportsMethod(id, config.method) ? `${source.note} Choose Museum metadata (keywords) to search this source.` : source.note, retrieved: 0, indexed: 0 }; });
   if (!ready.length) throw new Error('None of the selected museum connections are available. Choose a connected source; see the connection notes.');
   const perSource = Math.min(25, Math.max(8, Math.ceil(config.results / ready.length)));
   const imported = []; const directIds = new Set();
@@ -112,16 +123,16 @@ async function runSearch(config, job) {
       const failed = rows.filter(row => row?.error).length;
       imported.push(...good); coverage.indexed = good.length;
       coverage.state = failed || response.partialFailures ? 'partial' : good.length ? 'ready' : 'empty';
-      if (failed) coverage.message += ` ${failed} images could not be imported.`;
+      if (failed) coverage.message += ` ${failed} records could not be imported.`;
     } catch (error) { coverage.state = 'error'; coverage.message = error.message; }
   }));
   await saveIndex();
   if (job.cancelled) return;
-  let candidates = [...index.values()].filter(item => config.databases.includes(item.source));
+  let candidates = [...index.values()].filter(item => ready.includes(item.source) && (config.method === 'metadata' || !item.metadataOnly));
   // Metadata queries use source search matches plus literal matches in previously indexed records.
   if (config.method === 'metadata' && config.query) {
     const terms = config.query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
-    candidates = candidates.filter(item => directIds.has(item.id) || terms.every(term => `${item.title} ${item.artist} ${item.description} ${item.medium} ${item.culture}`.toLocaleLowerCase().includes(term)));
+    candidates = candidates.filter(item => directIds.has(item.id) || terms.every(term => `${item.title} ${item.artist} ${item.description} ${item.medium} ${item.culture} ${item.holdingMuseum || ''}`.toLocaleLowerCase().includes(term)));
   }
   job.total = candidates.length;
   if (['clip', 'multilingual'].includes(config.method)) {

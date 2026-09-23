@@ -163,3 +163,5 @@ dialog::backdrop{background:rgb(0 0 0 / .55)}
 .potential-status { font-size: .75rem; font-weight: 600; color: var(--secondary); }
 .potential-source a { display: block; font-size: .75rem; margin-top: 8px; color: var(--ink); }
 .all-row > span:first-of-type { flex: 1; }
+
+.metadata-placeholder { display: flex; min-height: 180px; align-items: center; justify-content: center; padding: 24px; color: #586650; background: #edf0e7; }

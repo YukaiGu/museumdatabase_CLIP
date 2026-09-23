@@ -93,3 +93,9 @@ The pinned `sentence-transformers/clip-ViT-B-32-multilingual-v1` text model uses
 Candidate retrieval preserves the original query and adds a small curated glossary of English and Asian art terms where recognized. This is not general machine translation. Search coverage lists the queries actually used. Original metadata and image attribution are retained, and visual ranking uses the original query. No matching glossary term means no automatic translation. The search still covers imported images, not all museum holdings.
 
 Run `node scripts/evaluate-multilingual.mjs` to compare 12 queries in four languages against the local image index. It writes `research/multilingual-evaluation.json` with rankings, consistency with English CLIP, latency, and process memory. These are engineering checks, not human-labeled relevance scores. AI processing continues on the Mac behind the temporary tunnel for the current Vercel deployment.
+
+### Japanese metadata collections
+
+Select **Japanese Museum Collections (SHŪZŌ)** and/or **Yokohama Museum of Art**, then choose **Advanced search → Museum metadata (keywords)**. Try `landscape` or `風景`. Both sources return factual catalog records with attribution and holding-museum names. Their images are not imported, and their cards do not offer Find similar. Visual methods skip metadata-only sources and explain this in Collection coverage; a search selecting only incompatible sources prompts you to change the method. All connected databases includes these sources when searching metadata.
+
+Power Station of Art / Shanghai Biennale, Taipei Fine Arts Museum, Gwangju Biennale, and MOCA Busan / Busan Biennale are documented under Potential databases while access and reuse remain unverified. See [ASIAN-SOURCES.md](ASIAN-SOURCES.md) for official references and connection limits.
