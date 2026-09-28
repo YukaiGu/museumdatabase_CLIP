@@ -84,7 +84,7 @@ function renderMuseumList() {
       checkbox.type = 'checkbox'; checkbox.value = museum.id; checkbox.checked = selected.has(museum.id); checkbox.setAttribute('aria-label', museum.name);
       checkbox.addEventListener('change', () => { if (checkbox.checked) selected.add(museum.id); else selected.delete(museum.id); onScopeChange(); });
       const connection = engine?.sources.find(source => source.id === museum.id);
-      const status = !connection ? 'Checking…' : connection.state === 'ready' ? `Connected${connection.methods?.length === 1 && connection.methods[0] === 'metadata' ? ' · Metadata only' : ''} · ${connection.indexed} indexed` : connection.state === 'key_required' ? 'API key required' : ({ access_blocked: 'Access blocked', permission_review: 'Reuse review needed', permission_required: 'Permission required', validation_required: 'Validation needed' }[connection.state] || 'Not connected');
+      const status = !connection ? 'Checking…' : connection.state === 'ready' ? `${connection.accessLabel || 'Connected'}${connection.methods?.length === 1 && connection.methods[0] === 'metadata' ? ' · Metadata only' : ''} · ${connection.indexed} indexed` : connection.state === 'key_required' ? 'API key required' : ({ access_blocked: 'Access blocked', permission_review: 'Reuse review needed', permission_required: 'Permission required', validation_required: 'Validation needed' }[connection.state] || 'Not connected');
       const copy = node('span', undefined, 'museum-copy'); copy.append(node('span', museum.name), node('small', museum.location), node('small', status, connection?.state === 'ready' ? 'source-connected' : 'source-unavailable'));
       label.append(checkbox, copy); section.append(label);
       if (connection?.catalogUrl) {
@@ -188,10 +188,11 @@ function openArtwork(artwork) {
   $('artwork-image').hidden = !artwork.image;
   if (artwork.image) $('artwork-image').src = artwork.image; else $('artwork-image').removeAttribute('src');
   $('artwork-image').alt = artwork.title; $('artwork-similar').hidden = !artwork.image;
-  const fields = [['Holding museum', artwork.holdingMuseum], ['Accession number', artwork.accessionNumber], ['Creator', artwork.artist], ['Date / period', artwork.date], ['Material / type', artwork.medium], ['Culture / origin', artwork.culture]].filter(([, value]) => value);
+  const fields = [['Data provider', artwork.dataProvider], ['Holding museum', artwork.holdingMuseum], ['Accession number', artwork.accessionNumber], ['Creator', artwork.artist], ['Date / period', artwork.date], ['Material / type', artwork.medium], ['Culture / origin', artwork.culture]].filter(([, value]) => value);
   $('artwork-metadata').replaceChildren(...fields.flatMap(([label, value]) => [node('dt', label), node('dd', value)]));
   $('artwork-description').textContent = artwork.description || (artwork.metadataOnly ? 'Images and narrative descriptions are excluded from this metadata connection. View the original museum record for more.' : 'No description supplied by the museum.');
   $('artwork-rights').textContent = `${artwork.rights}. ${artwork.attribution}`;
+  $('artwork-source').textContent = artwork.sourceLinkLabel || 'Open museum record';
   const link = sourceLink(artwork.sourceUrl); $('artwork-source').hidden = !link; if (link) $('artwork-source').href = link;
   $('artwork-similar').onclick = () => { $('artwork-dialog').close(); useReference(artwork); };
   $('artwork-dialog').showModal();

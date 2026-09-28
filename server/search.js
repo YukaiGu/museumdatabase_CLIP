@@ -107,7 +107,7 @@ async function runSearch(config, job) {
       let response = searches.get(cacheKey);
       if (!response || Date.now() - response.at > 10 * 60 * 1000) {
         let data = config.method === 'multilingual' ? await retrieveExpanded(searchSource, id, config.query, perSource) : await searchSource(id, config.query, perSource);
-        if (config.method !== 'metadata' && !data.records.length && ![...index.values()].some(r => r.source === id)) {
+        if (config.method !== 'metadata' && !data.records.length && [...index.values()].filter(r => r.source === id && !r.metadataOnly).length < perSource) {
           data = await searchSource(id, '', perSource);
           data.note = `${data.note || ''} No keyword candidates; imported a starting selection for visual ranking.`;
         }
@@ -115,7 +115,7 @@ async function runSearch(config, job) {
       }
       coverage.retrieved = response.records.length; coverage.totalAtSource = response.total ?? null;
       coverage.message = [response.note, response.partialFailures ? `${response.partialFailures} record requests failed.` : ''].filter(Boolean).join(' ');
-      const rows = await mapLimited(response.records, 3, async record => {
+      const rows = await mapLimited(response.records, id === 'whitney' ? 1 : 3, async record => {
         if (job.cancelled) return null;
         const result = await materialize(record); directIds.add(result.id); return result;
       });
@@ -123,8 +123,12 @@ async function runSearch(config, job) {
       const failed = rows.filter(row => row?.error).length;
       imported.push(...good); coverage.indexed = good.length;
       coverage.state = failed || response.partialFailures ? 'partial' : good.length ? 'ready' : 'empty';
-      if (failed) coverage.message += ` ${failed} records could not be imported.`;
-    } catch (error) { coverage.state = 'error'; coverage.message = error.message; }
+      if (failed) coverage.message += ` ${failed} records could not be imported. ${[...new Set(rows.filter(row => row?.error).map(row => row.error))].join(' ')}`;
+    } catch (error) {
+      const cachedCount = [...index.values()].filter(item => item.source === id && (config.method === 'metadata' || !item.metadataOnly)).length;
+      coverage.state = cachedCount ? 'partial' : 'error';
+      coverage.message = `Live collection refresh failed: ${error.message}${cachedCount ? ` ${cachedCount} saved artworks remain available for local search.` : ''}`;
+    }
   }));
   await saveIndex();
   if (job.cancelled) return;

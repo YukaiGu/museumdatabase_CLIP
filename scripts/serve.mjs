@@ -23,8 +23,8 @@ async function readJSON(request) {
   for await (const chunk of request) { bytes += chunk.length; if (bytes > 18 * 1024 * 1024) throw new Error('The upload is too large. Use smaller images.'); chunks.push(chunk); }
   return JSON.parse(Buffer.concat(chunks).toString());
 }
-const server = http.createServer(async (request, response) => {
-  const localPort = server.address()?.port;
+const handleRequest = async (request, response) => {
+  const localPort = request.socket.localPort;
   if (!requestAllowed(request.headers, allowedOrigins(localPort))) { sendJSON(response, 403, { error: 'Use the configured application address.' }); return; }
   try {
     const url = new URL(request.url, `http://${request.headers.host}`);
@@ -61,9 +61,22 @@ const server = http.createServer(async (request, response) => {
     });
     response.end(request.method === 'HEAD' ? undefined : content);
   } catch { if (!response.headersSent) sendJSON(response, 404, { error: 'Resource not found.' }); else response.end(); }
+};
+// Both addresses share one search queue and index, avoiding two writers to index-v1.json.
+const listeners = [{ host: bindHost, port }];
+if (process.env.LAN_HOST) {
+  const lanPort = Number(process.env.LAN_PORT || 5174);
+  if (!Number.isInteger(lanPort) || lanPort < 1 || lanPort > 65535) throw new Error('Invalid LAN_PORT.');
+  listeners.push({ host: process.env.LAN_HOST, port: lanPort });
+}
+const servers = listeners.map(({host, port: listenPort}) => {
+  const server = http.createServer(handleRequest);
+  server.on('error', error => { console.error(`${host}:${listenPort}: ${error.message}`); process.exitCode = 1; });
+  server.requestTimeout = 30_000;
+  server.headersTimeout = 15_000;
+  server.listen(listenPort, host, () => console.log(`Collection Atlas listening on ${host}:${server.address().port}`));
+  return server;
 });
-server.on('error', error => { console.error(error.code === 'EADDRINUSE' ? `Port ${port} is busy. Try: npm run dev -- --port 5174` : error.message); process.exitCode = 1; });
-server.requestTimeout = 30_000;
-server.headersTimeout = 15_000;
-server.listen(port, bindHost, () => console.log(`Collection Atlas listening on ${bindHost}:${server.address().port}`));
-for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.close(() => process.exit(0)));
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
+  Promise.all(servers.map(server => new Promise(resolve => server.close(resolve)))).then(() => process.exit(0));
+});

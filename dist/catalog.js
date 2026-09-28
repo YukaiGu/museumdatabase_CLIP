@@ -1,5 +1,6 @@
 /** Display names. Live connection status and indexed counts come from /api/status. */
 export const museums = Object.freeze([
+  { id: 'whitney', name: 'Whitney Museum of American Art', short: 'Whitney', location: 'New York · official public API', region: 'North America' },
   {"id": "shuzo", "name": "Japanese Museum Collections (SHŪZŌ)", "short": "SHŪZŌ", "location": "Japan · participating museums", "region": "Asia"},
   {"id": "yokohama", "name": "Yokohama Museum of Art", "short": "Yokohama Museum of Art", "location": "Yokohama, Japan · Triennale venue", "region": "Asia"},
   {"id": "psa", "name": "Power Station of Art · Shanghai Biennale", "short": "Power Station of Art", "location": "Shanghai, China · exhibition archive", "region": "Asia"},
@@ -21,7 +22,9 @@ export const museums = Object.freeze([
   { id: 'mia', name: 'Minneapolis Institute of Art', short: 'Mia', location: 'Minneapolis', region: 'North America' },
   { id: 'rijks', name: 'Rijksmuseum', short: 'Rijksmuseum', location: 'Amsterdam', region: 'Europe' },
   { id: 'met', name: 'The Metropolitan Museum', short: 'The Met', location: 'New York', region: 'North America' },
-  { id: 'moma', name: 'MoMA', short: 'MoMA', location: 'New York', region: 'North America' },
+  { id: 'moma', name: 'MoMA · open-image subset', short: 'MoMA', location: 'New York · Wikidata / Commons', region: 'North America' },
+  { id: 'tate', name: 'Tate · open-image subset', short: 'Tate', location: 'United Kingdom · Wikidata / Commons', region: 'Europe' },
+  { id: 'pompidou', name: 'Centre Pompidou · open-image subset', short: 'Centre Pompidou', location: 'Paris · Wikidata / Commons', region: 'Europe' },
   { id: 'getty', name: 'Getty', short: 'Getty', location: 'Los Angeles', region: 'North America' },
   { id: 'smithsonian', name: 'Smithsonian', short: 'Smithsonian', location: 'United States · multiple museums', region: 'North America' },
   { id: 'artic', name: 'Art Institute of Chicago', short: 'Art Institute of Chicago', location: 'Chicago', region: 'North America' },

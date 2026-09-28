@@ -1,3 +1,5 @@
+import { searchContemporary } from './contemporary.js';
+import { searchWhitney } from './whitney.js';
 import { shuzo, yokohama } from './japanese-metadata.js';
 import { japanArt } from './asian-sources.js';
 import * as cheerio from 'cheerio';
@@ -10,6 +12,7 @@ const ENGLISH = 'http://vocab.getty.edu/aat/300388277';
 const name = values => { const items = array(values).filter(v => v.type === 'Name'); return items.find(v => v.language?.some(l => l.id === ENGLISH))?.content || items[0]?.content || ''; };
 
 export const sourceDefinitions = [
+  { id: 'whitney', state: 'ready', catalogUrl: 'https://whitney.org/collection/works', termsUrl: 'https://whitney.org/about/website/api', note: 'Official public API with images for personal/noncommercial educational use. Modern and contemporary American art. Images are not CC0; full copyright captions retained. Imports a bounded selection per search for local AI ranking.', accessLabel: 'Personal research' },
   {"id": "shuzo", "state": "ready", "note": "Metadata only. Bounded keyword searches; retains the holding museum. Attribution and modification notice included; no images or full database reproduction.", "catalogUrl": "https://artplatform.go.jp/collections", "termsUrl": "https://artplatform.go.jp/terms-of-use", "methods": ["metadata"], "cacheLimit": 250},
   {"id": "yokohama", "state": "ready", "note": "Metadata only (CC BY 4.0). Basic catalog fields; images and work descriptions are excluded. Collection holdings, not a Triennale exhibition inventory.", "catalogUrl": "https://inventory.yokohama.art.museum/eng/", "termsUrl": "https://inventory.yokohama.art.museum/eng/siteterms.html", "methods": ["metadata"], "cacheLimit": 250},
   {"id": "psa", "state": "permission_review", "note": "Shanghai Biennale organizer and permanent main venue. Public exhibition archive; a supported data feed and metadata/image reuse permission have not been established. Not connected.", "catalogUrl": "https://www.powerstationofart.com/whats-on/news/shb-2020"},
@@ -32,7 +35,9 @@ export const sourceDefinitions = [
   { id: 'emuseum', catalogUrl: 'https://www.emuseum.go.kr/', termsUrl: 'https://www.emuseum.go.kr/openApi', keyUrl: 'https://www.data.go.kr/data/15159017/openapi.do', state: process.env.EMUSEUM_API_KEY ? 'validation_required' : 'key_required', note: 'Requires an approved EMUSEUM_API_KEY and authenticated schema / image-rights validation.' },
   { id: 'rijks', state: 'ready', note: 'Public Linked Art API.' },
   { id: 'met', state: 'ready', note: 'Public collection API; open-access images only.' },
-  { id: 'moma', state: 'unavailable', note: 'Image-search adapter not connected; collection metadata alone does not provide reusable image access.' },
+  { id: 'moma', state: 'ready', accessLabel: 'Limited image subset', catalogUrl: 'https://www.moma.org/collection/', termsUrl: 'https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia', note: 'AI image search through a limited Wikidata / Wikimedia Commons open-image subset, dated 1900 onward. Not the full MoMA database or an official museum API. Each image must pass license checks; attribution is retained.' },
+  { id: 'tate', state: 'ready', accessLabel: 'Limited image subset', catalogUrl: 'https://www.tate.org.uk/art', termsUrl: 'https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia', note: 'Modern and contemporary collection-linked artworks via Wikidata / Wikimedia Commons, dated 1900 onward. Open-image subset only, not the full Tate database. Includes individually licensed contemporary works where available.' },
+  { id: 'pompidou', state: 'ready', accessLabel: 'Limited image subset', catalogUrl: 'https://www.centrepompidou.fr/en/collection', termsUrl: 'https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia', note: 'Musée National d’Art Moderne collection-linked artworks via Wikidata / Wikimedia Commons, dated 1900 onward. Limited open-image subset; not the full Centre Pompidou database. Attribution and per-image licenses retained.' },
   { id: 'getty', state: 'unavailable', note: 'Collection adapter not yet connected.' },
   { id: 'smithsonian', state: process.env.SMITHSONIAN_API_KEY ? 'ready' : 'key_required', note: 'Requires SMITHSONIAN_API_KEY from api.data.gov.' },
   { id: 'artic', state: 'ready', note: 'Public API and IIIF; public-domain images.' },
@@ -160,7 +165,7 @@ async function mia(query, limit) {
   return { records: miaRecords(result.hits?.hits || []).slice(0, limit), total: result.hits?.total?.value ?? result.hits?.total };
 }
 
-const adapters = { shuzo, yokohama, japan_art: japanArt, npm, met, rijks, artic, cleveland, smithsonian, emuseum, smk, mia };
+const adapters = { whitney: searchWhitney, moma: (q,n) => searchContemporary('moma',q,n), tate: (q,n) => searchContemporary('tate',q,n), pompidou: (q,n) => searchContemporary('pompidou',q,n), shuzo, yokohama, japan_art: japanArt, npm, met, rijks, artic, cleveland, smithsonian, emuseum, smk, mia };
 export async function searchSource(id, query, limit) {
   const source = sourceDefinitions.find(s => s.id === id);
   if (!source || source.state !== 'ready') throw new Error(source?.note || 'Unknown museum.');
